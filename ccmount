@@ -1,0 +1,155 @@
+local rednet_fs = {
+	ccmount = function(options)
+	end,
+	
+	describe = function()
+	end,
+	
+	list = function(path)
+	end,
+}
+
+local http_fs = {
+  ccmount = function(options)
+  end,
+  
+	list = function(path)
+		
+	end,
+	
+	isDir = function(path)
+	end
+}
+
+local fs_types = {
+	http = http_fs,
+	rednet = rednet_fs
+}
+
+-- table files
+-- Returns a list of all the files (including subdirectories but not their contents) contained in a directory, as a numerically indexed table.
+function ccmount_list(path)
+	print("ccmount path", path)
+	local files = {};
+	
+	if path == "" then
+		files = fs._original.list(path)
+		table.insert(files, "mount") 	
+	else
+		files = fs._original.list(path)
+	end
+	
+	return files
+end
+
+local ccmount = {
+	-- boolean exists	
+	-- Checks if a path refers to an existing file or directory.
+	exists = function(path)
+		return fs._original.exists(path)
+	end,
+
+	-- boolean dir
+	-- Checks if a path refers to an existing directory.
+	isDir = function(path)
+		return fs._original.isDir(path)
+	end,
+
+	-- boolean readOnly	
+	-- Checks if a path is read-only (i.e. cannot be modified).
+	isReadOnly = function(path)
+		return fs._original.isReadOnly(path)
+	end,
+
+	-- string drive, or nil	
+	-- Returns the storage medium holding a path, or nil if the path does not exist.
+	getDrive = function(path)
+		return fs._original.getDrive(path)
+	end,
+	
+	-- int size
+	-- Gets the size of a file in bytes
+	getSize = function(path)
+		return fs._original.getSize(path)
+	end,
+	
+	-- int space
+	-- Gets the remaining space in the given directory.
+	getFreeSpace = function(path)
+		return fs._original.getFreeSpace(path)
+	end,
+	
+	-- Makes a directory.
+	makeDir = function(path)
+		return fs._original.makeDir(path)
+	end,
+	
+	-- Moves a file or directory to a new location.
+	move = function(fromPath, toPath)
+		return fs._original.move(fromPath, toPath)
+	end,
+	
+	-- Copies a file or directory to a new location.
+	copy = function(fromPath, toPath)
+		return fs._original.copy(fromPath, toPath)
+	end,
+	
+	-- Deletes a file or directory.
+	delete = function(path)
+		return fs._original.delete(path)
+	end,
+	
+	-- table handle	
+	-- Opens a file so it can be read or written. 
+	open = function(path, mode)
+		return fs._original.open(path, mode)
+	end,
+	
+	-- set ccmount to prevent multiple installations
+	ccmount = true
+}
+
+--TODO: detect if ccmount is actually being used, before blatantly overwriting these functions
+if not fs._original then
+	fs._original = {
+		list = fs.list,
+		exists = fs.exists,
+		isDir = fs.isDir,
+		isReadOnly = fs.isReadOnly,
+		getName = fs.getName,
+		getDrive = fs.getDrive,
+		getSize = fs.getSize, 
+		getFreeSpace = fs.getFreeSpace,
+		makeDir = fs.makeDir,
+		move = fs.move, 
+		copy = fs.copy,
+		delete = fs.delete,
+		open = fs.open
+	}
+	
+	fs._ccmount = {
+		mounts = {}
+	}
+end
+
+for key, func in pairs(ccmount) do
+	fs[key] = func
+end
+
+local tArgs = {...};
+
+if #tArgs > 0 then
+	
+else
+	print ("ccmount <source> <mount point>")
+	if #fs._ccmount.mounts > 0 then
+		print ("Currently mounted filesystems")
+		for path, fs_inst in pairs(fs._ccmount.mounts) do
+			print ("  ", path, fs_inst:describe());
+		end
+	else
+		print("No filesystems mounted")
+	end
+end
+
+
