@@ -32,7 +32,12 @@ local function cc_splitPath(path)
   return path
 end
 
-local cc_fs = {
+if TEST then
+  TEST.cc_splitPath = cc_splitPath
+end
+
+local cc_fs = {}
+cc_fs = {
   list = function(path)
     path = cc_splitPath(path)
     local start = utils.walk(cc_fake_root, path)
@@ -100,19 +105,109 @@ local cc_fs = {
 	end,
 	
 	getFreeSpace = function(path)
-		return fs._original.getFreeSpace(path)
+		return 512*1024
 	end,
 	
 	makeDir = function(path)
-		return fs._original.makeDir(path)
+		if cc_fs.isReadOnly(path) then
+		  error("Access Denied", 2)
+		end				
+		local path = cc_splitPath(path)
+		local current_ref = cc_fake_root
+		for i, dir in ipairs(path) do
+		  if current_ref[dir] then
+		    if type(current_ref[dir]) ~= 'table' then
+		      error("File exists", 2)
+		    else
+		      current_ref = current_ref[dir]
+		    end
+		  else
+		    current_ref[dir] = {}
+		  end
+		end
 	end,
 	
 	move = function(fromPath, toPath)
-		return fs._original.move(fromPath, toPath)
+		-- fromPath/toPath should not be read-only
+
+		if cc_fs.isReadOnly(fromPath) then
+		  error("Access Denied", 2)
+		end				
+
+		if cc_fs.isReadOnly(toPath) then
+		  error("Access Denied", 2)
+		end				
+
+		toPath = cc_splitPath(toPath)
+		
+  	-- toPath should not exit!		
+  	local destination = toPath[#toPath]
+		local toRef = utils.walk(cc_fake_root, toPath)		
+		if toRef ~= nil then
+		  error("File exists", 2)
+		end
+		toPath[#toPath] = nil
+
+		toRef = utils.walk(cc_fake_root, toPath)
+		--[[ CC has an issue here, so I'm answering a bit differently! ]]
+		if toRef == nil then
+		  error("Invalid Destination", 2)
+		end
+		
+   	-- fromPath should exist!
+		fromPath = cc_splitPath(fromPath)
+		local fromRef = utils.walk(cc_fake_root, fromPath)
+		
+		if fromRef == nil then
+		  error("No such file", 2) 
+		end
+		
+		local source = fromPath[#fromPath]
+		fromPath[#fromPath] = nil
+		
+		fromRef = utils.walk(cc_fake_root, fromPath)
+		
+		toRef[destination] = fromRef[source]
+		fromRef[source] = nil
 	end,
 	
 	copy = function(fromPath, toPath)
-		return fs._original.copy(fromPath, toPath)
+		-- toPath should not be read-only
+		if cc_fs.isReadOnly(toPath) then
+		  error("Access Denied", 2)
+		end				
+
+		toPath = cc_splitPath(toPath)
+  	
+  	-- toPath should not exits!
+  	local destination = toPath[#toPath]
+		local toRef = utils.walk(cc_fake_root, toPath)		
+		if toRef ~= nil then
+		  error("File exists", 2)
+		end
+		toPath[#toPath] = nil
+
+		toRef = utils.walk(cc_fake_root, toPath)
+		--[[ CC has an issue here, so I'm answering a bit differently! ]]
+		if toRef == nil then
+		  error("Invalid Destination", 2)
+		end
+		
+   	-- fromPath should exist!
+		fromPath = cc_splitPath(fromPath)
+		local fromRef = utils.walk(cc_fake_root, fromPath)
+		
+		if fromRef == nil then
+		  error("No such file", 2) 
+		end
+		
+		local source = fromPath[#fromPath]
+		fromPath[#fromPath] = nil
+		
+		fromRef = utils.walk(cc_fake_root, fromPath)
+		
+		toRef[destination] = fromRef[source]
+		fromRef[source] = nil
 	end,
 	
 	delete = function(path)

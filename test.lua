@@ -1,3 +1,4 @@
+TEST = {}
 --[[
   this testing environment is ran inside luajit not lua - luajit was closer
   to a computercraft environment on my system.  YMMV - post patches ;)
@@ -6,9 +7,31 @@
 local inspect = require('inspect')
 local utils = require('utils')
 
-compareArray = utils.compareArray;
-splitPath = utils.splitPath;
-testArrays = utils.testArrays;
+local compareArray = utils.compareArray
+local splitPath = utils.splitPath
+local testArrays = utils.testArrays
+
+assert(compareArray({"a","b"}, {"b","a"}))
+assert(not compareArray({"b","a"}, {"a","a"}))
+assert(not compareArray({"b","c"}, {"a","a"}))
+assert(not compareArray({"b","a","d"}, {"a","a"}))
+
+
+function assertError(func, expected, ...)
+  ok, response = pcall(func, ...)
+  if ok then
+    error("Expected error", 2)
+  else
+    if response == expected then
+      return true
+    else
+      print ("Expected: ", expected)
+      print ("Recieved: ", response)
+      error("Unexpected response")
+    end
+  end
+end
+
 
 testArrays(splitPath(""), {})
 testArrays(splitPath("/"), {})
@@ -57,6 +80,37 @@ assert(vfs.getSize("rom") == 0)
 assert(vfs.getSize("/foo") == 13)
 
 
+vfs.makeDir("/test")
+
+testArrays(
+  vfs.list(""), 
+  {"test", "foo", "rom", "disk"}
+);
+
+assert(vfs.isDir("/test"))
+
+assertError(vfs.makeDir, "File exists", "/foo")
+assertError(vfs.makeDir, "Access Denied", "/rom/test")
+
+--[[TODO: move files!!]]
+
+vfs.makeDir("/adir")
+vfs.makeDir("/bdir")
+assert(vfs.isDir("/adir"))
+assert(vfs.isDir("bdir"))
+
+assertError(vfs.move, "File exists", "adir", "/bdir")
+
+vfs.move("adir", "bdir/adir")
+
+assert(not vfs.isDir("adir"))
+assert(vfs.isDir("/bdir"))
+assert(vfs.isDir("/bdir/adir"))
+
+vfs.move("/foo", "bdir/adir/fud")
+assert(vfs.getSize("bdir/adir/fud") == 13)
+vfs.move("bdir/adir/fud", "/foo")
+assert(vfs.getSize("foo") == 13)
 
 print("all tests passed!")
 
@@ -94,6 +148,5 @@ setfenv(f, {
 })
 
 f()
-
 
 ]]

@@ -33,7 +33,6 @@ local function splitPath(path)
 end
 
 local function compareArray(obj1, obj2)
-  -- hehe, oh this is dirty! but works!
   if obj1 == nil then
     return false
   end
@@ -41,18 +40,34 @@ local function compareArray(obj1, obj2)
   if obj2 == nil then
     return false
   end
+
+  if #obj1 ~= #obj2 then
+    return false
+  end
   
-  for k,v in ipairs(obj1) do
-    if obj1[k] ~= obj2[k] then
-      return false
+  local c = #obj2
+  
+  for i,item1 in ipairs(obj1) do
+    for j,item2 in ipairs(obj2) do
+      if item1 == item2 then
+        c = c - 1
+        break
+      end
     end
   end
-  for k,v in ipairs(obj2) do
-    if obj1[k] ~= obj2[k] then
-      return false
+
+  local b = #obj1
+
+  for i,item1 in ipairs(obj2) do
+    for j,item2 in ipairs(obj1) do
+      if item1 == item2 then
+        b = b - 1
+        break
+      end
     end
   end
-  return true
+
+  return c == 0 and b == 0
 end
 
 local function testArrays(obj1, obj2)
